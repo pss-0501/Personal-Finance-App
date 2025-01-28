@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Portfolio Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            text-align: center;
+        }
+        .nav-links {
+            margin: 20px 0;
+            text-align: center;
+            justify-content: center;
+        }
+        .nav-links a {
+            margin: 0 10px;
+            text-decoration: none;
+            color: rgb(244, 244, 255);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+        <h1>Welcome, {{ current_user.name }}!</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('portfolio.view_portfolio') }}">View Portfolio</a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
+    {% else %}
+        <h1>Welcome to Portfolio Manager</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('auth.login') }}">Login</a>
+            <a href="{{ url_for('auth.register') }}">Register</a>
+        </div>
+    {% endif %}
+</body>
+</html>

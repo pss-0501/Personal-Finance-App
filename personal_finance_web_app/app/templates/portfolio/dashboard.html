@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Portfolio Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- For pie charts-->
+    <script src="https://unpkg.com/lucide@latest"></script> <!-- Trash can icon-->
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>Portfolio Dashboard</h1>
+            <div class="nav-links">
+                <a href="{{ url_for('portfolio.add_account') }}" class="nav-button">Add Account</a>
+                <a href="{{ url_for('home') }}" class="nav-button">Back to Home</a>
+            </div>
+        </div>
+
+        {% if current_user.portfolio.accounts %}
+            <div class="accounts-scroll">
+                {% for account_id, account in current_user.portfolio.accounts.items() %}
+                    <div class="account-card">
+                        <div class="account-header">
+                            <div>
+                                <h2 class="account-title">{{ account.name }}</h2>
+                                <div class="account-type">{{ account.account_type }}</div>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('portfolio.add_asset', account_id=account_id) }}" class="nav-button">Add Asset</a>
+                                <form method="POST" action="{{ url_for('portfolio.remove_account', account_id=account_id) }}" style="display: inline;">
+                                    <button type="submit" class="nav-button" style="padding: 4px; margin-left: 4px; height: 24px; width: 24px; display: inline-flex; align-items: center; justify-content: center;"
+                                    onclick="return confirm('Are you sure you want to remove this account and all its assets?')">
+                                        <i data-lucide="trash-2" style="width: 24px; height: 24px; color: #dc3545;"></i>
+                                </button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        {% if account.holdings %}
+                            <div class="asset-list">
+                                {% for asset_id, asset in account.holdings.items() %}
+                                    <div class="asset-item">
+                                        {{ asset.name }} - ${{ "%.2f"|format(asset.calculate_value()) }}
+                                        <form method="POST" action="{{ url_for('portfolio.remove_asset', account_id=account_id, asset_id=asset_id) }}" style="display: inline;">
+                                            <button type="submit" class="nav-button" style="padding: 4px 8px; font-size: 0.8em;"
+                                                    onclick="return confirm('Are you sure you want to remove this asset?')">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="total-value">
+                                Total: ${{ "%.2f"|format(account.calculate_total_value()) }}
+                            </div>
+                        {% else %}
+                            <p>No assets in this account</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="visualization-section">
+                <h2>Portfolio Visualizations</h2>
+                <div class="visualization-buttons">
+                    <button class="viz-button" onclick="loadVisualization('asset')">Asset Breakdown</button>
+                    <button class="viz-button" onclick="loadVisualization('account')">Account Breakdown</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="portfolioChart"></canvas>
+                </div>
+            </div>
+        {% else %}
+            <p>No accounts yet. Add an account to get started!</p>
+        {% endif %}
+    </div>
+
+    <!-- JavaScript for visualizations -->
+    <script>
+        // Keeps track of our current chart so we can update it
+        let currentChart = null;
+        
+        // This function is called when a button is clicked
+        async function loadVisualization(strategyType) {
+            // Fetch data from our backend route
+            const response = await fetch(`/portfolio/visualize/${strategyType}`);
+            const data = await response.json();
+            
+            // If we already have a chart, remove it before creating a new one
+            if (currentChart) {
+                currentChart.destroy();
+            }
+        
+            // Get the canvas element where we'll draw the chart
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Create different types of charts based on the strategy
+            let config;
+            if (strategyType === 'comparison') {
+                config = createBarChartConfig(data);
+            } else {
+                config = createPieChartConfig(data);
+            }
+            
+            // Create the new chart
+            currentChart = new Chart(ctx, config);
+        }
+        
+        // Configuration for pie charts (asset and account breakdowns)
+        function createPieChartConfig(data) {
+            return {
+                type: 'pie',
+                data: {
+                    labels: data.labels,  // Names of assets/accounts
+                    datasets: [{
+                        data: data.values,  // Values from our Python data
+                        backgroundColor: generateColors(data.labels.length)  // Colors for each slice
+                    }]
+                },
+                options: {
+                    responsive: true,  // Chart will resize with window
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: data.title
+                        }
+                    }
+                }
+            };
+        }
+        
+        // Generate colors for chart elements
+        function generateColors(count) {
+            // Predefine colors 
+            const colors = [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                '#9966FF', '#FF9F40', '#FF6384', '#36A2EB'
+            ];
+            return colors.slice(0, count);
+        }
+        // For trash icon
+        lucide.createIcons();
+
+    </script>
+</body>
+</html>
